@@ -5,7 +5,6 @@ import region
 import utils
 import numpy as np
 from rtree import index
-import matplotlib.pyplot as plt
 import time
 
 
@@ -152,22 +151,25 @@ def dynamicTimeWarping(traj0:trajectory,traj1:trajectory) -> float:
     return dtw_distance, optimal_path
 
 
+## Build an R-tree index for a list of trajectories represented as 2D points.
 def build_rtree_for_points(list_of_trajectories):
-    p = index.Property()
+    p = index.Property() # Create a new Property object 'p' to specify the settings for the R-tree index.
     p.dimension = 2  # 2D points (x, y)
     p.near_minimum_overlap_factor = 4
-    p.index_capacity = 5
-    p.leaf_capacity = 5
-    p.fill_factor = 0.9
-    p.split_distribution_factor = 0.5
-    idx = index.Index(properties=p)
+    p.index_capacity = 5  # maximum number of child nodes in an index node.
+    p.leaf_capacity = 5   # maximum number of data entries in a leaf node.
+    p.fill_factor = 0.9   # Determine the minimum fill ratio of the nodes.
+    p.split_distribution_factor = 0.5  # splitting rule
+    idx = index.Index(properties=p)   # Create the R-tree index using the specified properties.
 
+    # Insert the trajectory number and its point's (X, Y) coordinates into the R-tree index.
     for traj in list_of_trajectories:
         for traj_point in traj.points:
             idx.insert(traj.number, (traj_point.X, traj_point.Y, traj_point.X, traj_point.Y))
 
     return idx
 
+# Get a trajectory from the list based on its trajectory number.
 def get_trajectory_by_number(list_of_trajectories, trajectory_number):
     for traj in list_of_trajectories:
         if traj.number == trajectory_number:

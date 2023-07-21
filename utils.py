@@ -1,11 +1,13 @@
 # imports
-import numpy as np
 import point
 import trajectory
 import math
 from glob import glob
+import numpy as np
 import matplotlib.pyplot as plt
-from itertools import cycle
+from matplotlib.animation import FuncAnimation
+from datetime import datetime
+import matplotlib.colors as mcolors
 
 
 """Import a single trajectory from a file with the file format 
@@ -84,41 +86,70 @@ def uppendTrajectory(traj: trajectory, add_traj: trajectory, traj_number):
 
     return new_traj
 
-'''Vizualize all trajectories at once'''
+'''Visulaize all Trajectories as an animation, cosidering their actual time stamps'''
 def vizualizeAllTrajectories(traj_list: list):
+    # Create the figure and axis for the animation
+    fig, ax = plt.subplots()
 
-    i = 1
-
-    x_coords = []
-    y_coords = []
-
-    # iterate over trajectories
+    # Find the minimum and maximum bounds of all trajectories
+    min_x, max_x = float('inf'), float('-inf')
+    min_y, max_y = float('inf'), float('-inf')
     for traj in traj_list:
-        # make a list with coordinates
-        for point in traj.points:
-            x_coords.append(point.X)
-            y_coords.append(point.Y)
+        x_vals = [point.X for point in traj.points]
+        y_vals = [point.Y for point in traj.points]
 
-        # set figure parameters
-        plt.figure(i)
-        color = c = np.random.rand(3,).reshape(1,-1)
-        plt.scatter(x_coords, y_coords, c=color)
-        plt.plot(x_coords, y_coords, c=color)
-        plt.xlabel("X", fontsize=12)
-        plt.ylabel("Y", fontsize=12)
-        plt.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
-        plt.title("Trajectory №" + str(traj.number))
+        min_x = min(min_x, min(x_vals))
+        max_x = max(max_x, max(x_vals))
+        min_y = min(min_y, min(y_vals))
+        max_y = max(max_y, max(y_vals))
 
-        i += 1
+    ax.set_xlim(min_x, max_x)  # Set x-axis limits based on min and max x values
+    ax.set_ylim(min_y, max_y)  # Set y-axis limits based on min and max y values
 
-        # reset coordinates array
-        x_coords = []
-        y_coords = []
+    lines = []  # List to store the line objects for each trajectory
 
-    # show the figures
+    # Generate a list of distinct colors for each trajectory
+    num_trajectories = len(traj_list)
+    colors = list(mcolors.CSS4_COLORS.values())
+    unique_colors = colors[:num_trajectories]
+
+    # Function to update the animation frame
+    def update(frame):
+        all_finished = True  # Flag to check if all trajectories have finished displaying their points
+        for idx, line in enumerate(lines):
+            trajectory = traj_list[idx]  # Get the trajectory corresponding to the current line
+
+            # If the current frame is within the range of trajectory points, it means the trajectory is still ongoing.
+            if frame < len(trajectory.points):
+                all_finished = False # At least one trajectory has not finished displaying points
+                current_timestamp = trajectory.points[frame].timestamp  # Get the current timestamp from the trajectory's points.
+                current_timestamp = datetime.strptime(current_timestamp, '%Y-%m-%d:%H:%M:%S') # Convert the timestamp string to a datetime object for comparison.
+
+                # Filter points that have timestamps earlier than or equal to the current frame's timestamp
+                filtered_points = [point for point in trajectory.points if datetime.strptime(point.timestamp, '%Y-%m-%d:%H:%M:%S') <= current_timestamp]
+
+                # Extract the X and Y data from the filtered points for updating the line's data.
+                x_data = [point.X for point in filtered_points]
+                y_data = [point.Y for point in filtered_points]
+                line.set_data(x_data, y_data) # Update the line's data with the new X and Y coordinates to reflect the trajectory's appearance at the current frame.
+        if all_finished:
+            # Stop the animation when all trajectories have finished displaying points
+            ani.event_source.stop()
+        return lines
+
+    # Create line objects for each trajectory with unique colors
+    for idx, trajectory in enumerate(traj_list):
+        line, = ax.plot([], [], lw=2, color=unique_colors[idx])
+        lines.append(line)
+
+    # Create the animation
+    ani = FuncAnimation(fig, update, frames=len(max(traj_list, key=lambda t: len(t.points)).points), interval=10, blit=True)
+
+    # Set the plot background color to light grey
+    ax.set_facecolor('lightgrey')
+    plt.title("All Trajectories Animation")
     plt.show()
 
-    return
 
 '''Vizualize trajectories after preprocessing'''
 def compareTrajectories(orig_traj: trajectory, dp_traj: trajectory, sw_traj: trajectory):
@@ -185,6 +216,7 @@ def plot_trajectories_with_CPD(traj0, traj1, point_pair):
     # Show the plot
     plt.show()
 
+'''plot the optimal path of DTW of 2 trajectories'''
 def plot_optimal_path(traj0, traj1, optimal_path):
     # Unpack the trajectory points
     traj0_points = [(p.X, p.Y) for p in traj0.points]
@@ -222,44 +254,6 @@ def plot_optimal_path(traj0, traj1, optimal_path):
     # Show the plot
     plt.show()
 
-# '''Vizualize all trajectories at once'''
-# def vizualizeAllTrajectoriesCircle(traj_list: list, point: point, radius):
-
-#     i = 1
-
-#     x_coords = []
-#     y_coords = []
-
-#     # iterate over trajectories
-#     for traj in traj_list:
-#         # make a list with coordinates
-#         for point in traj.points:
-#             x_coords.append(point.X)
-#             y_coords.append(point.Y)
-
-#         # set figure parameters
-#         plt.figure(i)
-#         color = c = np.random.rand(3,).reshape(1,-1)
-#         plt.scatter(x_coords, y_coords, c=color)
-#         plt.plot(x_coords, y_coords, c=color)
-#         plt.xlabel("X", fontsize=12)
-#         plt.ylabel("Y", fontsize=12)
-#         plt.grid(linestyle="--", linewidth=0.5, color='.25', zorder=-10)
-#         plt.title("Trajectory №" + str(traj.number))
-
-#         i += 1
-
-#         # reset coordinates array
-#         x_coords = []
-#         y_coords = []
-
-#     # show the figures
-#         plt.scatter(point.X, point.Y)
-#         circle = plt.Circle((point.X, point.Y), radius, color='red')
-#         plt.gca().add_patch(circle)
-#     plt.show()
-
-#     return
 
 
 #Visualize trajectories intersected with the query region (point, raduis)
