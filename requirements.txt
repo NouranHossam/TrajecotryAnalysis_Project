@@ -1,0 +1,8 @@
+# Numerical library for scientific computing
+numpy==1.23.5
+
+# Plotting library for data visualization
+matplotlib==3.6.3
+
+
+rtree==1.0.1
